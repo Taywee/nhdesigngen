@@ -11,7 +11,7 @@ license = "MIT"
 keywords = ["games", "graphics"]
 categories = ["games","multimedia::images", "multimedia"]
 
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+image = '^0.23'
+exoquant = '^0.2'
+clap = '^2'
