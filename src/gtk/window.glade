@@ -107,6 +107,8 @@
                                 <property name="row_spacing">12</property>
                                 <property name="min_children_per_line">4</property>
                                 <property name="max_children_per_line">8</property>
+                                <property name="selection_mode">none</property>
+                                <property name="activate_on_single_click">False</property>
                               </object>
                               <packing>
                                 <property name="expand">False</property>
