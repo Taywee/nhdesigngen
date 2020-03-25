@@ -16,6 +16,8 @@ image = '^0.23'
 exoquant = '^0.2'
 #clap = '^2'
 gio = "^0"
+gdk = "^0"
+gdk-pixbuf = "^0"
 pango = "^0"
 glib = "^0"
 

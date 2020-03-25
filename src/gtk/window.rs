@@ -1,12 +1,9 @@
-use crate::design::{Design, Type};
+use crate::color::NHPaletteItem;
+use crate::design::{Design};
 use crate::gtk::{Result, TryGet};
 use glib::object::IsA;
 use gtk::prelude::*;
-use std::borrow::Cow;
 use std::cell::RefCell;
-use std::fs::File;
-use std::i16;
-use std::ops::Deref;
 use std::path::PathBuf;
 use std::rc::Rc;
 
@@ -50,7 +47,9 @@ fn open_multiple<T: IsA<gtk::Window>>(window: &T) -> Option<Vec<PathBuf>> {
             ("_Open", gtk::ResponseType::Accept),
         ],
     );
-    file_chooser_dialog.set_property("select-multiple", &true);
+    file_chooser_dialog
+        .set_property("select-multiple", &true)
+        .unwrap();
     let response = file_chooser_dialog.run();
     let filenames = file_chooser_dialog.get_filenames();
     file_chooser_dialog.destroy();
@@ -96,8 +95,23 @@ impl Window {
                 if let Some(window) = window.upgrade() {
                     if let Some(paths) = open_multiple(&window.window) {
                         let mut design = window.design.borrow_mut();
-                        design.load_palette(paths, Type::Simple);
+                        design.load_palette(paths).unwrap();
                     }
+                    Window::update(&window).unwrap();
+                }
+            });
+        }
+
+        {
+            let load_image: gtk::Button = window.builder.try_get("load_image")?;
+            let window = Rc::downgrade(&window);
+            load_image.connect_clicked(move |_| {
+                if let Some(window) = window.upgrade() {
+                    if let Some(path) = open(&window.window) {
+                        let mut design = window.design.borrow_mut();
+                        design.load_image(path).unwrap();
+                    }
+                    Window::update(&window).unwrap();
                 }
             });
         }
@@ -107,6 +121,48 @@ impl Window {
     }
 
     fn update(window: &Rc<Self>) -> Result<()> {
+        let design = window.design.borrow();
+        let dimensions = design.dimensions();
+        let width = dimensions.0 as usize;
+        let palette_box: gtk::Box = window.builder.try_get("palette")?;
+        let palette: Vec<NHPaletteItem> = design.palette().iter().cloned().collect();
+        palette_box.foreach(gtk::WidgetExt::destroy);
+        for (i, item) in palette.iter().enumerate() {
+            let rgba: gdk::RGBA = item.into();
+            let frame = gtk::Frame::new(Some(&(i + 1).to_string()));
+            let color_button = gtk::ColorButton::new_with_rgba(&rgba);
+            frame.add(&color_button);
+            palette_box.add(&frame);
+        }
+        palette_box.show_all();
+
+        let pixels = design.generate();
+        let pixbuf = gdk_pixbuf::Pixbuf::new(gdk_pixbuf::Colorspace::Rgb, true, 8, dimensions.0 as i32, dimensions.1 as i32).unwrap();
+
+        let grid: gtk::Grid = window.builder.try_get("grid")?;
+        grid.foreach(gtk::WidgetExt::destroy);
+
+        for (i, index) in design.generate().iter().enumerate() {
+            let x = i % width;
+            let y = i / width;
+            let pixel = &palette[*index as usize];
+            let rgba: gdk::RGBA = pixel.into();
+            let color_button = gtk::ColorButton::new_with_rgba(&rgba);
+            let aspect_frame = gtk::AspectFrame::new(Some(&(index + 1).to_string()), 0.5, 0.5, 1.0, false);
+            aspect_frame.set_label_align(0.5, 0.5);
+            aspect_frame.add(&color_button);
+            grid.attach(&aspect_frame, x as i32, y as i32, 1, 1);
+
+            let color: exoquant::Color = pixel.into();
+            pixbuf.put_pixel(x as i32, y as i32, color.r, color.g, color.b, color.a);
+        }
+        grid.show_all();
+
+        let image: gtk::Image = window.builder.try_get("image")?;
+
+        let pixbuf = pixbuf.scale_simple(dimensions.0 as i32 * 10, dimensions.1 as i32 * 10, gdk_pixbuf::InterpType::Nearest).unwrap();
+        image.set_from_pixbuf(Some(&pixbuf));
+
         Ok(())
     }
 }
@@ -116,4 +172,3 @@ impl Drop for Window {
         self.window.destroy();
     }
 }
-

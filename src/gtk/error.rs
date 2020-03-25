@@ -32,4 +32,3 @@ impl From<io::Error> for Error {
         Error::Io(error)
     }
 }
-
