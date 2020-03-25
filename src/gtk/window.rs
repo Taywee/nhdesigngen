@@ -101,6 +101,33 @@ impl Window {
         }
 
         {
+            let optimizer_combobox: gtk::ComboBoxText = window.builder.try_get("optimizer")?;
+            let window = Rc::downgrade(&window);
+            optimizer_combobox.connect_changed(move |_| {
+                if let Some(window) = window.upgrade() {
+                    let optimizer_combobox: gtk::ComboBoxText = window.builder.try_get("optimizer").unwrap();
+                    let optimizer_active_id: Option<String> = optimizer_combobox.get_active_id().map(|s| s.to_string());
+                    let optimizer: Box<dyn optimizer::Optimizer> = match optimizer_active_id {
+                        Some(id) => {
+                            match id.as_str() {
+                                "kmeans" => Box::new(optimizer::KMeans),
+                                "weighted-kmeans" => Box::new(optimizer::WeightedKMeans),
+                                o => panic!("Could not find optimizer {:?}", o),
+                                
+                            }
+                        }
+                        None => panic!("Optimizer dropdown box failed to give a value!"),
+                    };
+                    {
+                        let mut design = window.design.borrow_mut();
+                        design.optimize_palette(optimizer);
+                    }
+                    Window::update(&window).unwrap();
+                }
+            });
+        }
+
+        {
             let load_palette: gtk::Button = window.builder.try_get("load_palette")?;
             let optimizer_combobox: gtk::ComboBoxText = window.builder.try_get("optimizer")?;
 
@@ -122,7 +149,8 @@ impl Window {
 
                     if let Some(paths) = open_multiple(&window.window) {
                         let mut design = window.design.borrow_mut();
-                        design.load_palette(paths, optimizer).unwrap();
+                        design.load_histogram(paths).unwrap();
+                        design.optimize_palette(optimizer);
                     }
                     Window::update(&window).unwrap();
                 }

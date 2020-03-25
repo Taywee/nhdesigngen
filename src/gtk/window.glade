@@ -4,6 +4,7 @@
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkApplicationWindow" id="window">
     <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Animal Crossing: New Horizons Design Generator</property>
     <property name="default_width">400</property>
     <property name="default_height">400</property>
     <child>
@@ -58,8 +59,7 @@
                                       <object class="GtkComboBoxText" id="optimizer">
                                         <property name="visible">True</property>
                                         <property name="can_focus">False</property>
-                                        <property name="tooltip_text" translatable="yes">Palette optimizer.  Weighted K-Means is slightly better for dithered images, but you should experiment for the best results.
-Changing this requires you to manually reload the images to update the palette.</property>
+                                        <property name="tooltip_text" translatable="yes">Palette optimizer.  Weighted K-Means is slightly better for dithered images, but you should experiment for the best results.</property>
                                         <property name="active">0</property>
                                         <property name="active_id">kmeans</property>
                                         <items>

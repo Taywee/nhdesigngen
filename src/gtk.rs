@@ -7,7 +7,6 @@ pub use window::Window;
 use glib::object::IsA;
 use glib::object::Object;
 use gtk::prelude::*;
-use std::rc::{Rc, Weak};
 use crate::color::NHPaletteItem;
 
 type Result<T> = std::result::Result<T, Error>;

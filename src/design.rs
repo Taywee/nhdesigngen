@@ -7,8 +7,9 @@ use std::iter::{Extend, IntoIterator, repeat_with};
 use std::path::Path;
 
 pub struct Design {
-    palette: Vec<NHPaletteItem>,
     source_image: RgbaImage,
+    histogram: Histogram,
+    palette: Vec<NHPaletteItem>,
 }
 
 impl Default for Design {
@@ -17,6 +18,7 @@ impl Default for Design {
         palette.push(NHPaletteItem::Transparent);
         Design {
             palette,
+            histogram: Histogram::new(),
             source_image: RgbaImage::new(32, 32),
         }
     }
@@ -27,18 +29,16 @@ impl Design {
         &self.palette
     }
 
-    /// Load some files into a contained palette
-    pub fn load_palette<F, O>(&mut self, files: F, optimizer: O) -> image::error::ImageResult<()>
+    /// Load some files into a contained histogram
+    pub fn load_histogram<F>(&mut self, files: F) -> image::error::ImageResult<()>
     where
         F: IntoIterator,
         F::Item: AsRef<Path>,
-        O: AsRef<dyn Optimizer>
     {
-        let optimizer = optimizer.as_ref();
-        let mut histogram = Histogram::new();
+        self.histogram = Histogram::new();
         for path in files {
             let input = image::open(path)?.into_rgba();
-            histogram.extend(input.pixels()
+            self.histogram.extend(input.pixels()
                 // Filter out all transparent pixels for the purpose of palette generation
                 .filter(|p| p[3] > 0)
                 .map(|p| {
@@ -50,9 +50,18 @@ impl Design {
                     }
             }));
         }
+        Ok(())
+    }
+
+    /// Load some files into a contained palette
+    pub fn optimize_palette<O>(&mut self, optimizer: O)
+    where
+        O: AsRef<dyn Optimizer>,
+    {
+        let optimizer = optimizer.as_ref();
 
         let colorspace = SimpleColorSpace::default();
-        let mut quantizer = Quantizer::new(&histogram, &colorspace);
+        let mut quantizer = Quantizer::new(&self.histogram, &colorspace);
         while quantizer.num_colors() < 15 {
             quantizer.step();
             // Maybe remove this, is very slow
@@ -60,12 +69,11 @@ impl Design {
         }
 
         let palette = quantizer.colors(&colorspace);
-        let palette = optimizer.optimize_palette(&colorspace, &palette, &histogram, 16);
+        let palette = optimizer.optimize_palette(&colorspace, &palette, &self.histogram, 16);
 
         // Convert palette into possible AC colors
         self.palette = palette.into_iter().map(Into::into).collect();
         self.palette.push(NHPaletteItem::Transparent);
-        Ok(())
     }
 
     /// Load an image into the internal image buffer
