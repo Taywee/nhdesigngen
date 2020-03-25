@@ -35,6 +35,7 @@ impl Design {
         F: IntoIterator,
         F::Item: AsRef<Path>,
     {
+        //TODO: Add >64x64 per-image error condition
         self.histogram = Histogram::new();
         for path in files {
             let input = image::open(path)?.into_rgba();
@@ -81,6 +82,7 @@ impl Design {
     where
         P: AsRef<Path>,
     {
+        //TODO: Add >64x64 per-image error condition
         self.source_image = image::open(path)?.into_rgba();
         Ok(())
     }
