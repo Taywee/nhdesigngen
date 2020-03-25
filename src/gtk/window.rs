@@ -40,6 +40,27 @@ fn open<T: IsA<gtk::Window>>(window: &T) -> Option<PathBuf> {
     }
 }
 
+fn open_multiple<T: IsA<gtk::Window>>(window: &T) -> Option<Vec<PathBuf>> {
+    let file_chooser_dialog = gtk::FileChooserDialog::with_buttons(
+        Some("Open File"),
+        Some(window),
+        gtk::FileChooserAction::Open,
+        &[
+            ("_Cancel", gtk::ResponseType::Cancel),
+            ("_Open", gtk::ResponseType::Accept),
+        ],
+    );
+    file_chooser_dialog.set_property("select-multiple", &true);
+    let response = file_chooser_dialog.run();
+    let filenames = file_chooser_dialog.get_filenames();
+    file_chooser_dialog.destroy();
+    if response == gtk::ResponseType::Accept {
+        Some(filenames)
+    } else {
+        None
+    }
+}
+
 impl Window {
     /**
      * Build and show a Window.
@@ -73,9 +94,9 @@ impl Window {
             let window = Rc::downgrade(&window);
             load_palette.connect_clicked(move |_| {
                 if let Some(window) = window.upgrade() {
-                    if let Some(path) = open(&window.window) {
+                    if let Some(paths) = open_multiple(&window.window) {
                         let mut design = window.design.borrow_mut();
-                        design.load_palette(&[path], Type::Simple);
+                        design.load_palette(paths, Type::Simple);
                     }
                 }
             });
