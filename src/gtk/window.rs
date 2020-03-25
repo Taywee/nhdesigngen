@@ -6,6 +6,8 @@ use gtk::prelude::*;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
+use exoquant::optimizer;
+use exoquant::ditherer;
 
 /** GTK design management struct.
  *
@@ -89,13 +91,38 @@ impl Window {
         });
 
         {
+            let ditherer_combobox: gtk::ComboBoxText = window.builder.try_get("ditherer")?;
+            let window = Rc::downgrade(&window);
+            ditherer_combobox.connect_changed(move |_| {
+                if let Some(window) = window.upgrade() {
+                    Window::update(&window).unwrap();
+                }
+            });
+        }
+
+        {
             let load_palette: gtk::Button = window.builder.try_get("load_palette")?;
+            let optimizer_combobox: gtk::ComboBoxText = window.builder.try_get("optimizer")?;
+
             let window = Rc::downgrade(&window);
             load_palette.connect_clicked(move |_| {
                 if let Some(window) = window.upgrade() {
+                    let optimizer_active_id: Option<String> = optimizer_combobox.get_active_id().map(|s| s.to_string());
+                    let optimizer: Box<dyn optimizer::Optimizer> = match optimizer_active_id {
+                        Some(id) => {
+                            match id.as_str() {
+                                "kmeans" => Box::new(optimizer::KMeans),
+                                "weighted-kmeans" => Box::new(optimizer::WeightedKMeans),
+                                o => panic!("Could not find optimizer {:?}", o),
+                                
+                            }
+                        }
+                        None => panic!("Optimizer dropdown box failed to give a value!"),
+                    };
+
                     if let Some(paths) = open_multiple(&window.window) {
                         let mut design = window.design.borrow_mut();
-                        design.load_palette(paths).unwrap();
+                        design.load_palette(paths, optimizer).unwrap();
                     }
                     Window::update(&window).unwrap();
                 }
@@ -124,25 +151,59 @@ impl Window {
         let design = window.design.borrow();
         let dimensions = design.dimensions();
         let width = dimensions.0 as usize;
-        let palette_box: gtk::Box = window.builder.try_get("palette")?;
+        let palette_box: gtk::FlowBox = window.builder.try_get("palette")?;
+        let ditherer_combobox: gtk::ComboBoxText = window.builder.try_get("ditherer")?;
+        let ditherer_active_id: Option<String> = ditherer_combobox.get_active_id().map(|s| s.to_string());
+        let ditherer: Box<dyn ditherer::Ditherer> = match ditherer_active_id {
+            Some(id) => {
+                match id.as_str() {
+                    "none" => Box::new(ditherer::None),
+                    "floyd-steinberg" => Box::new(ditherer::FloydSteinberg::new()),
+                    "floyd-steinberg-vanilla" => Box::new(ditherer::FloydSteinberg::vanilla()),
+                    "floyd-steinberg-checkered" => Box::new(ditherer::FloydSteinberg::checkered()),
+                    "ordered" => Box::new(ditherer::Ordered),
+                    d => panic!("Could not find ditherer {:?}", d),
+                }
+            }
+            None => panic!("Ditherer dropdown box failed to give a value!"),
+        };
+
         let palette: Vec<NHPaletteItem> = design.palette().iter().cloned().collect();
         palette_box.foreach(gtk::WidgetExt::destroy);
         for (i, item) in palette.iter().enumerate() {
             let rgba: gdk::RGBA = item.into();
             let frame = gtk::Frame::new(Some(&(i + 1).to_string()));
             let color_button = gtk::ColorButton::new_with_rgba(&rgba);
-            frame.add(&color_button);
+            let item_box = gtk::Box::new(gtk::Orientation::Vertical, 12);
+            item_box.set_border_width(12);
+            item_box.add(&color_button);
+            match item {
+                NHPaletteItem::Color(color) => {
+                    let hue_frame = gtk::Frame::new(Some("hue"));
+                    hue_frame.add(&gtk::Label::new(Some(&(color.h + 1).to_string())));
+                    let saturation_frame = gtk::Frame::new(Some("saturation"));
+                    saturation_frame.add(&gtk::Label::new(Some(&(color.s + 1).to_string())));
+                    let value_frame = gtk::Frame::new(Some("value"));
+                    value_frame.add(&gtk::Label::new(Some(&(color.v + 1).to_string())));
+                    item_box.add(&hue_frame);
+                    item_box.add(&saturation_frame);
+                    item_box.add(&value_frame);
+                }
+                NHPaletteItem::Transparent => {
+                    item_box.add(&gtk::Label::new(Some("Transparent")));
+                }
+            }
+            frame.add(&item_box);
             palette_box.add(&frame);
         }
         palette_box.show_all();
 
-        let pixels = design.generate();
         let pixbuf = gdk_pixbuf::Pixbuf::new(gdk_pixbuf::Colorspace::Rgb, true, 8, dimensions.0 as i32, dimensions.1 as i32).unwrap();
 
         let grid: gtk::Grid = window.builder.try_get("grid")?;
         grid.foreach(gtk::WidgetExt::destroy);
 
-        for (i, index) in design.generate().iter().enumerate() {
+        for (i, index) in design.generate(ditherer).iter().enumerate() {
             let x = i % width;
             let y = i / width;
             let pixel = &palette[*index as usize];

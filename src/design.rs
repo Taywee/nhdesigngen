@@ -1,6 +1,6 @@
 use crate::color::NHPaletteItem;
-use exoquant::ditherer::FloydSteinberg;
-use exoquant::optimizer::{KMeans, Optimizer};
+use exoquant::optimizer::Optimizer;
+use exoquant::ditherer::Ditherer;
 use exoquant::{Color, Histogram, Quantizer, SimpleColorSpace, Remapper};
 use image::RgbaImage;
 use std::iter::{Extend, IntoIterator, repeat_with};
@@ -28,11 +28,13 @@ impl Design {
     }
 
     /// Load some files into a contained palette
-    pub fn load_palette<F>(&mut self, files: F) -> image::error::ImageResult<()>
+    pub fn load_palette<F, O>(&mut self, files: F, optimizer: O) -> image::error::ImageResult<()>
     where
         F: IntoIterator,
         F::Item: AsRef<Path>,
+        O: AsRef<dyn Optimizer>
     {
+        let optimizer = optimizer.as_ref();
         let mut histogram = Histogram::new();
         for path in files {
             let input = image::open(path)?.into_rgba();
@@ -50,12 +52,11 @@ impl Design {
         }
 
         let colorspace = SimpleColorSpace::default();
-        let optimizer = KMeans;
         let mut quantizer = Quantizer::new(&histogram, &colorspace);
         while quantizer.num_colors() < 15 {
             quantizer.step();
             // Maybe remove this, is very slow
-            quantizer = quantizer.optimize(&optimizer, 4);
+            quantizer = quantizer.optimize(optimizer, 4);
         }
 
         let palette = quantizer.colors(&colorspace);
@@ -81,12 +82,13 @@ impl Design {
     }
 
     /// Generate the indexed design in question 
-    pub fn generate(&self) -> Vec<u8> {
-        //let ditherer = FloydSteinberg::new();
-        let ditherer = exoquant::ditherer::None;
+    pub fn generate<D>(&self, ditherer: D) -> Vec<u8>
+        where D: AsRef<dyn Ditherer>
+    {
+        let ditherer = ditherer.as_ref();
         let colorspace = SimpleColorSpace::default();
         let palette: Vec<Color> = self.palette.iter().map(Into::into).collect();
-        let remapper = Remapper::new(&palette, &colorspace, &ditherer);
+        let remapper = Remapper::new(&palette, &colorspace, ditherer);
         let pixels: Vec<Color> = self.source_image.pixels().map(|p| {
                 if p[3] == 0 {
                     // Ensure all transparent pixels have the same color

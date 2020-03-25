@@ -4,6 +4,8 @@
   <requires lib="gtk+" version="3.20"/>
   <object class="GtkApplicationWindow" id="window">
     <property name="can_focus">False</property>
+    <property name="default_width">400</property>
+    <property name="default_height">400</property>
     <child>
       <placeholder/>
     </child>
@@ -24,20 +26,6 @@
                 <property name="orientation">vertical</property>
                 <property name="spacing">12</property>
                 <child>
-                  <object class="GtkButton" id="load_palette">
-                    <property name="label" translatable="yes">Load Palette Images</property>
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="receives_default">True</property>
-                    <property name="tooltip_text" translatable="yes">Select one or more images to use in generating a palette</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">0</property>
-                  </packing>
-                </child>
-                <child>
                   <object class="GtkFrame" id="palette_frame">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
@@ -49,12 +37,82 @@
                         <property name="can_focus">False</property>
                         <property name="border_width">12</property>
                         <child>
-                          <object class="GtkBox" id="palette">
+                          <object class="GtkBox">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="orientation">vertical</property>
+                            <property name="spacing">12</property>
                             <child>
-                              <placeholder/>
+                              <object class="GtkFrame">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="halign">start</property>
+                                <property name="label_xalign">0.5</property>
+                                <property name="shadow_type">in</property>
+                                <child>
+                                  <object class="GtkAlignment">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">False</property>
+                                    <property name="border_width">12</property>
+                                    <child>
+                                      <object class="GtkComboBoxText" id="optimizer">
+                                        <property name="visible">True</property>
+                                        <property name="can_focus">False</property>
+                                        <property name="tooltip_text" translatable="yes">Palette optimizer.  Weighted K-Means is slightly better for dithered images, but you should experiment for the best results.
+Changing this requires you to manually reload the images to update the palette.</property>
+                                        <property name="active">0</property>
+                                        <property name="active_id">kmeans</property>
+                                        <items>
+                                          <item id="kmeans" translatable="yes">K-Means</item>
+                                          <item id="weighted-kmeans" translatable="yes">Weighted K-Means</item>
+                                        </items>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child type="label">
+                                  <object class="GtkLabel">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">False</property>
+                                    <property name="label" translatable="yes">Optimizer</property>
+                                  </object>
+                                </child>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkButton" id="load_palette">
+                                <property name="label" translatable="yes">Load Palette Images</property>
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="receives_default">True</property>
+                                <property name="tooltip_text" translatable="yes">Select one or more images to use in generating a palette.</property>
+                                <property name="halign">start</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkFlowBox" id="palette">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="column_spacing">12</property>
+                                <property name="row_spacing">12</property>
+                                <property name="min_children_per_line">4</property>
+                                <property name="max_children_per_line">8</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
                             </child>
                           </object>
                         </child>
@@ -75,23 +133,58 @@
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkFrame">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="label_xalign">0.5</property>
+                    <property name="shadow_type">in</property>
+                    <child>
+                      <object class="GtkAlignment">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="border_width">12</property>
+                        <child>
+                          <object class="GtkComboBoxText" id="ditherer">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="tooltip_text" translatable="yes">Ditherer.  Floyd Steinberg or No Ditherer are usually best, but Ordered 2x2 can look less noisy.  The default Floyd Steinberg ditherer reduces color bleeding vs the vanilla one, and the Checkered one favors checkerboard patterns.  Experiment for the best results.</property>
+                            <property name="halign">start</property>
+                            <property name="active">0</property>
+                            <property name="active_id">none</property>
+                            <items>
+                              <item id="none" translatable="yes">No Ditherer</item>
+                              <item id="floyd-steinberg" translatable="yes">Floyd-Steinberg</item>
+                              <item id="floyd-steinberg-vanilla" translatable="yes">Floyd-Steinberg Vanilla</item>
+                              <item id="floyd-steinberg-checkered" translatable="yes">Floyd-Steinberg Checkered</item>
+                              <item id="ordered" translatable="yes">Ordered 2x2</item>
+                            </items>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                    <child type="label">
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Ditherer</property>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
                   <object class="GtkButton" id="load_image">
                     <property name="label" translatable="yes">Load Image</property>
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
-                  </object>
-                  <packing>
-                    <property name="expand">False</property>
-                    <property name="fill">True</property>
-                    <property name="position">2</property>
-                  </packing>
-                </child>
-                <child>
-                  <object class="GtkImage" id="image">
-                    <property name="visible">True</property>
-                    <property name="can_focus">False</property>
-                    <property name="stock">gtk-missing-image</property>
+                    <property name="tooltip_text" translatable="yes">Load the image and regenerate.</property>
+                    <property name="halign">start</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -100,23 +193,26 @@
                   </packing>
                 </child>
                 <child>
+                  <object class="GtkImage" id="image">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="halign">start</property>
+                    <property name="stock">gtk-missing-image</property>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="fill">True</property>
+                    <property name="position">4</property>
+                  </packing>
+                </child>
+                <child>
                   <object class="GtkGrid" id="grid">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
+                    <property name="row_spacing">12</property>
+                    <property name="column_spacing">12</property>
                     <child>
-                      <object class="GtkAspectFrame">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label_xalign">0</property>
-                        <property name="shadow_type">none</property>
-                        <child>
-                          <placeholder/>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="top_attach">2</property>
-                      </packing>
+                      <placeholder/>
                     </child>
                     <child>
                       <placeholder/>
@@ -146,7 +242,7 @@
                   <packing>
                     <property name="expand">False</property>
                     <property name="fill">True</property>
-                    <property name="position">4</property>
+                    <property name="position">5</property>
                   </packing>
                 </child>
               </object>
