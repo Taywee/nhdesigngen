@@ -1,26 +1,45 @@
-pub mod gtk;
 pub mod color;
 pub mod design;
+pub mod gtk;
 
+use exoquant::{convert_to_indexed, ditherer, optimizer, Color};
+use image::imageops::FilterType;
+use image::io::Reader;
 use std::error::Error;
 use std::io::{BufRead, Seek};
-use image::io::Reader;
-use image::imageops::FilterType;
-use exoquant::{convert_to_indexed, Color, ditherer, optimizer};
 
-pub struct Config<R> where R: BufRead + Seek {
+pub struct Config<R>
+where
+    R: BufRead + Seek,
+{
     pub input: Reader<R>,
 }
 
-pub fn convert<R>(config: Config<R>) -> Result<(), Box<dyn Error>> where R: BufRead + Seek {
-    let input = config.input.decode()?.resize_exact(32, 32, FilterType::Lanczos3).into_rgba();
-    let pixels: Vec<Color> = input.pixels().map(|p| Color {
-        r: p[0],
-        g: p[1],
-        b: p[2],
-        a: p[3],
-    }).collect();
-    let (palette, indexed_data) = convert_to_indexed(&pixels, input.width() as usize, 16, &optimizer::KMeans, &ditherer::None);
+/*pub fn convert<R>(config: Config<R>) -> Result<(), Box<dyn Error>>
+where
+    R: BufRead + Seek,
+{
+    let input = config
+        .input
+        .decode()?
+        .resize_exact(32, 32, FilterType::Lanczos3)
+        .into_rgba();
+    let pixels: Vec<Color> = input
+        .pixels()
+        .map(|p| Color {
+            r: p[0],
+            g: p[1],
+            b: p[2],
+            a: p[3],
+        })
+        .collect();
+    let (palette, indexed_data) = convert_to_indexed(
+        &pixels,
+        input.width() as usize,
+        16,
+        &optimizer::KMeans,
+        &ditherer::None,
+    );
 
     println!("P3");
     println!("{} {}", input.width(), input.height());
@@ -36,10 +55,10 @@ pub fn convert<R>(config: Config<R>) -> Result<(), Box<dyn Error>> where R: BufR
             s: saturation as f32 * (1.0 / 15.0),
             v: value as f32 * (1.0 / 15.0),
             a: 1.0,
-        }.into();
+        }
+        .into();
         //println!("{} {} {}", color.r, color.g, color.b);
         println!("{} {} {}", new_color.r, new_color.g, new_color.b);
     }
     Ok(())
-}
-
+}*/

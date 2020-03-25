@@ -1,5 +1,5 @@
-use exoquant::{Color, Histogram, SimpleColorSpace, Quantizer};
 use exoquant::optimizer::{KMeans, Optimizer};
+use exoquant::{Color, Histogram, Quantizer, SimpleColorSpace};
 use image::RgbaImage;
 use std::iter::{Extend, IntoIterator};
 use std::path::Path;
@@ -24,12 +24,9 @@ impl Default for Design {
 }
 
 impl Design {
-    pub fn new() -> Design {
-        Default::default()
-    }
-
     pub fn load_palette<F>(&mut self, files: F, type_: Type) -> image::error::ImageResult<()>
-        where F: IntoIterator,
+    where
+        F: IntoIterator,
         F::Item: AsRef<Path>,
     {
         let mut histogram = Histogram::new();
@@ -38,12 +35,7 @@ impl Design {
             histogram.extend(input.pixels().map(|p| {
                 if p[3] == 0 {
                     // Ensure all transparent pixels have the same color
-                    Color {
-                        r: 0,
-                        g: 0,
-                        b: 0,
-                        a: 0,
-                    }
+                    Color::new(0, 0, 0, 0)
                 } else {
                     Color {
                         r: p[0],
@@ -68,11 +60,16 @@ impl Design {
         }
 
         let palette = quantizer.colors(&colorspace);
-        // If simple, a transparent color is mandatory
-        let palette = match type_ {
+        self.palette = match type_ {
+            // If simple, a transparent color is mandatory
             Type::Simple => {
-                let mut new_palette = optimizer.optimize_palette(&colorspace, &palette, &histogram, 16);
-                let transparent_index = palette.iter().enumerate().find(|(i, c)| c.a == 0).map(|(i, _)| i);
+                let mut new_palette =
+                    optimizer.optimize_palette(&colorspace, &palette, &histogram, 16);
+                let transparent_index = palette
+                    .iter()
+                    .enumerate()
+                    .find(|(i, c)| c.a == 0)
+                    .map(|(i, _)| i);
                 match transparent_index {
                     Some(index) => {
                         // Move the transparent color to the end
@@ -82,8 +79,9 @@ impl Design {
                         new_palette
                     }
                     None => {
-                        // Need to add a transparent color.
-                        let new_palette = optimizer.optimize_palette(&colorspace, &palette, &histogram, 15);
+                        // Add a transparent color, even if it's not used.
+                        let mut new_palette =
+                            optimizer.optimize_palette(&colorspace, &palette, &histogram, 15);
                         new_palette.push(Color {
                             r: 0,
                             g: 0,
@@ -93,7 +91,7 @@ impl Design {
                         new_palette
                     }
                 }
-            },
+            }
             // No transparency to worry about.  Trust the user to not supply transparent pixels.
             Type::Pro => optimizer.optimize_palette(&colorspace, &palette, &histogram, 15),
         };

@@ -25,21 +25,18 @@ impl From<Color> for HSVA {
         let c_max = r_prime.max(g_prime).max(b_prime);
         let c_min = r_prime.min(g_prime).min(b_prime);
         let delta = c_max - c_min;
-        let mut hue = 60.0 * if c_max == r_prime {
-            (g_prime - b_prime) / delta
-        } else if c_max == g_prime {
-            (b_prime - r_prime) / delta + 2.0
-        } else {
-            (r_prime - g_prime) / delta + 4.0
-        };
+        let mut hue = 60.0
+            * if c_max == r_prime {
+                (g_prime - b_prime) / delta
+            } else if c_max == g_prime {
+                (b_prime - r_prime) / delta + 2.0
+            } else {
+                (r_prime - g_prime) / delta + 4.0
+            };
         while hue < 0.0 {
             hue += 360.0;
         }
-        let saturation = if c_max == 0.0 {
-            0.0
-        } else {
-            delta / c_max
-        };
+        let saturation = if c_max == 0.0 { 0.0 } else { delta / c_max };
         HSVA {
             h: hue,
             s: saturation,
@@ -58,7 +55,7 @@ impl From<HSVA> for Color {
                 g: 0,
                 b: 0,
                 a,
-            }
+            };
         } else if hsv.s == 0.0 {
             let v = (hsv.v * 255.0).round() as u8;
             return Color {
@@ -66,7 +63,7 @@ impl From<HSVA> for Color {
                 g: v,
                 b: v,
                 a,
-            }
+            };
         }
         let chroma = hsv.v * hsv.s;
         let h_prime = hsv.h / 60.0;
@@ -95,5 +92,3 @@ impl From<HSVA> for Color {
         }
     }
 }
-
-
