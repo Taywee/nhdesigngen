@@ -15,3 +15,16 @@ categories = ["games","multimedia::images", "multimedia"]
 image = '^0.23'
 exoquant = '^0.2'
 clap = '^2'
+gio = "^0"
+pango = "^0"
+glib = "^0"
+
+[dependencies.gtk]
+version = "^0.8"
+features = ["v3_20"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = 'abort'
