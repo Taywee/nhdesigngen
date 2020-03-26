@@ -15,8 +15,8 @@ categories = ["games","multimedia::images", "multimedia"]
 crate-type = ["cdylib"]
 
 [dependencies]
-image = '^0.23'
 exoquant = '^0.2'
+js-sys = '^0.3'
 
 [dependencies.serde]
 version = '^1'

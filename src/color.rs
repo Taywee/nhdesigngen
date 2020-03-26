@@ -14,28 +14,27 @@ pub struct HSVA {
     pub a: f32,
 }
 
-
-
-/// Quantized HSV
-#[derive(Debug, Default, Clone, Serialize)]
-pub struct NHColor {
-    pub h: u8,
-    pub s: u8,
-    pub v: u8,
-}
-
 /// Palette item allowing HSV or transparent
 #[derive(Debug, Clone, Serialize)]
 pub enum NHPaletteItem {
-    Color(NHColor),
+    Color{
+        h: u8,
+        s: u8,
+        v: u8,
+    },
     Transparent,
 }
 
-/// Palette item allowing HSV or transparent
+/// Palette item allowing HSV in NH format, combined with RGBA in [0, 255] range
 #[derive(Debug, Clone, Serialize)]
-pub struct NHPaletteItemPair {
-    pub item: NHPaletteItem,
-    pub rgba: String,
+pub struct HSVRGBA {
+    pub h: u8,
+    pub s: u8,
+    pub v: u8,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
 }
 
 impl Default for HSVA {
@@ -51,7 +50,11 @@ impl Default for HSVA {
 
 impl Default for NHPaletteItem {
     fn default() -> Self {
-        NHPaletteItem::Color(Default::default())
+        NHPaletteItem::Color{
+            h: 0,
+            s: 0,
+            v: 0,
+        }
     }
 }
 
@@ -139,7 +142,7 @@ impl From<&HSVA> for NHPaletteItem {
         if hsv.a == 0.0 {
             NHPaletteItem::Transparent
         } else {
-            NHPaletteItem::Color(NHColor {
+            NHPaletteItem::Color{
                 // Hue is [0, 29] for 30 full colors.  30 is full red, and has wraparound, so we scale
                 // from 0-30 and set a modulus
                 h: ((hsv.h / 360.0 * 30.0).round() as u8) % 30,
@@ -151,7 +154,7 @@ impl From<&HSVA> for NHPaletteItem {
 
                 // The value behavior is exactly like the saturation behavior above.
                 v: ((hsv.v * 15.0).round() as u8).min(14).max(0),
-            })
+            }
         }
     }
 }
@@ -165,10 +168,10 @@ impl From<&NHPaletteItem> for HSVA {
                 v: 0.0,
                 a: 0.0,
             },
-            NHPaletteItem::Color(color) => HSVA {
-                h: color.h as f32 * (360.0 / 30.0),
-                s: color.s as f32 / 15.0,
-                v: color.v as f32 / 15.0,
+            NHPaletteItem::Color{h, s, v, ..} => HSVA {
+                h: *h as f32 * (360.0 / 30.0),
+                s: *s as f32 / 15.0,
+                v: *v as f32 / 15.0,
                 a: 1.0,
             },
         }
@@ -186,6 +189,40 @@ impl From<&NHPaletteItem> for Color {
     fn from(palette_item: &NHPaletteItem) -> Self {
         let hsv: HSVA = palette_item.into();
         (&hsv).into()
+    }
+}
+
+impl From<&HSVRGBA> for NHPaletteItem {
+    fn from(color: &HSVRGBA) -> Self {
+        if color.a == 0 {
+            NHPaletteItem::Transparent
+        } else {
+            NHPaletteItem::Color{
+                h: color.h,
+                s: color.s,
+                v: color.v,
+            }
+        }
+    }
+}
+
+impl From<&NHPaletteItem> for HSVRGBA {
+    fn from(palette_item: &NHPaletteItem) -> Self {
+        let color: Color = palette_item.into();
+        let (h, s, v) = match palette_item {
+            NHPaletteItem::Transparent => (0, 0, 0),
+            NHPaletteItem::Color{h, s, v, ..} => (*h, *s, *v),
+        };
+
+        HSVRGBA {
+            h,
+            s,
+            v,
+            r: color.r,
+            g: color.g,
+            b: color.b,
+            a: color.a,
+        }
     }
 }
 
@@ -222,6 +259,18 @@ impl From<Color> for NHPaletteItem {
 }
 
 impl From<NHPaletteItem> for Color {
+    fn from(palette_item: NHPaletteItem) -> Self {
+        (&palette_item).into()
+    }
+}
+
+impl From<HSVRGBA> for NHPaletteItem {
+    fn from(color: HSVRGBA) -> Self {
+        (&color).into()
+    }
+}
+
+impl From<NHPaletteItem> for HSVRGBA {
     fn from(palette_item: NHPaletteItem) -> Self {
         (&palette_item).into()
     }
