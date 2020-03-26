@@ -1,0 +1,22 @@
+{
+  "name": "nhdesigngen",
+  "collaborators": [
+    "Taylor C. Richberger <taywee@gmx.com>"
+  ],
+  "description": "An Animal Crossing: New Horizons design generator",
+  "version": "0.2.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/Taywee/nhdesigngen"
+  },
+  "files": [
+    "nhdesigngen_bg.wasm",
+    "nhdesigngen.js",
+    "nhdesigngen.d.ts"
+  ],
+  "module": "nhdesigngen.js",
+  "homepage": "https://gitlab.com/Taywee/nhdesigngen",
+  "types": "nhdesigngen.d.ts",
+  "sideEffects": false
+}
