@@ -15,7 +15,7 @@
   </style>
   <body>
     <script type="module">
-      import init, { design_new, design_palette, design_load_palette, design_optimize_palette } from './pkg/nhdesigngen.js';
+      import init, { design_new, design_palette, design_load_palette, design_optimize_palette, design_load_image, design_dimensions, design_generate } from './pkg/nhdesigngen.js';
 
       async function run() {
         await init();
@@ -85,6 +85,53 @@
               value_row.appendChild(value_td);
             }
           });
+
+          const ditherer = document.getElementById('ditherer').value;
+
+          const dimensions = design_dimensions(design);
+          const width = dimensions[0];
+          const height = dimensions[1];
+
+          const pixels = design_generate(design, ditherer);
+
+          const design_table = document.getElementById('design');
+          design_table.textContent = '';
+
+          const design_header = document.createElement('tr');
+          design_table.appendChild(design_header);
+
+          design_header.appendChild(document.createElement('th'));
+
+          // Set up header row
+          for (let i = 0; i < width; ++i) {
+            const item = document.createElement('th');
+            item.textContent = i + 1;
+            design_header.appendChild(item);
+          }
+
+          const rows = [];
+          // Set up body columns
+          for (let i = 0; i < height; ++i) {
+            const row = document.createElement('tr');
+
+            const item = document.createElement('th');
+            item.textContent = i + 1;
+            row.appendChild(item);
+            rows[i] = row;
+            design_table.appendChild(row);
+          }
+
+          // Set up the actual pixels
+          pixels.forEach((pixel, index) => {
+            const y = Math.floor(index / width);
+            const row = rows[y];
+            const td = document.createElement('td');
+            td.textContent = pixel + 1;
+            row.appendChild(td);
+            const color = palette[pixel];
+            const text_color = (color.v > 8 ? 'black' : 'white');
+            td.setAttribute('style', `background-color: rgba(${color.r}, ${color.g}, ${color.b}, ${color.a}); color: ${text_color}`);
+          });
         }
 
 
@@ -111,7 +158,11 @@
                   output.push([imgData[i], imgData[i + 1], imgData[i + 2], imgData[i + 3]]);
                 }
                 // Return the canvas rgba data
-                resolve(output);
+                resolve({
+                  data: output,
+                  width: img.width,
+                  height: img.height,
+                });
               }
               img.src = object_url;
             };
@@ -125,11 +176,15 @@
         }
 
         async function setPaletteFiles(event) {
-          // Load all the files into data
-          const data = await Promise.all(Array.from(event.target.files).map(file => loadFile(file)));
-          design_load_palette(design, data);
-          optimizePalette();
-          update();
+          try {
+            // Load all the files into data
+            const data = (await Promise.all(Array.from(event.target.files).map(file => loadFile(file)))).map(image => image.data);
+            design_load_palette(design, data);
+            optimizePalette();
+            update();
+          } catch (e) {
+            alert(e);
+          }
         }
 
         function changeOptimizer(event) {
@@ -137,15 +192,58 @@
           update();
         }
 
+        async function setImage(event) {
+          try {
+            if (event.target.files.length > 0) {
+            // Load all the files into data
+              const file = await loadFile(event.target.files[0]);
+              design_load_image(design, file.data, file.width, file.height);
+              update();
+            }
+          } catch (e) {
+            alert(e);
+          }
+        }
+
         document.getElementById('loadpalette').addEventListener('change', setPaletteFiles, false);
         document.getElementById('optimizer').addEventListener('change', changeOptimizer, false);
+        document.getElementById('ditherer').addEventListener('change', update, false);
+        document.getElementById('loadimage').addEventListener('change', setImage, false);
 
         update();
       }
 
       run();
     </script>
-    <h1>Palette</h1>
+    <h1>Animal Crossing: New Horizons Design Generator</h1>
+    <a href="https://gitlab.com/Taywee/nhdesigngen">This is free software.  The
+      source code is available, and you may feel free to make changes and pull
+      requests.  The repository might also have more detailed and up-to-date
+      information in the future, but for now, I haven't filled out much of the
+      README or other documentation yet.</a>
+    <p>I am not a web developer, so please let me know if you are and there is
+    anything here that you would like to help with, or that I can easily
+    fix.</p>
+    <h2>How do I use this?</h2>
+    <ol>
+      <li>First, you must have resized the images you want to use yourself ahead of time using something like <a href="https://www.gimp.org/">The GIMP</a> or Photoshop.  This will not resize images for you.  Regular design sizes are 32x32.  Also make sure, if you are using Pro designs, that you are using images without any transparent colors, as transparent colors will not work with Pro designs.</li>
+      <li>Select one or more palette images to generate the palette.  You may select more than one here to ensure you can maintain a constant palette for Pro designs.</li>
+      <li>Select the image you want to load.</li>
+      <li>The design should now be generated in the table below.</li>
+      <li>Tweak the Optimizer and Ditherer settings until it looks good enough.  <a href="https://docs.rs/exoquant/0.2.0/exoquant/optimizer/index.html">Some optimizer details can be found here</a> and <a href="https://docs.rs/exoquant/0.2.0/exoquant/ditherer/index.html">Some ditherer details can be found here</a> and the difference between the Floyd-Steinberg variants can be found <a href="https://docs.rs/exoquant/0.2.0/exoquant/ditherer/struct.FloydSteinberg.html">here</a></li>
+      <li>Go into the palette color editor and edit each individual palette color.  The Hue, Saturation, and Value sliders are numbered from 1 from the left.</li>
+      <li>Fill out the pixels.  If you are doing a pro palette, make sure you have used all the images you want to use to generate the palette, and load your next image.  Feel free to tweak the ditherer, but do not touch the optimizer setting, because the palette may not be changed for different parts of a Pro design.</li>
+    </ol>
+    <h2>Why not just use the QR code generating ones? Isn't this tedious?</h2>
+    <p>This is extraordinarily tedious.  This tool exists because Animal
+    Crossing: New Horizons has a fully-customizable palette, and Animal
+    Crossing: New Leaf did not.  Unfortunately, the QR codes only support the
+    older palettes with limited colors, so the only way to get the full color
+    fidelity that New Horizons makes possible is to tweak the palette and put
+    pixels in individually.  At least unless Nintendo updates Animal Crossing:
+    New Horizons to support any method of sharing full-fidelity patterns without
+    going through their servers.</p>
+    <h2>Palette</h2>
     <label for="optimizer">Palette Optimizer</label>
     <select id="optimizer">
       <option value="kmeans" selected>K-Means</option>
@@ -153,7 +251,22 @@
     </select>
     <br>
     <label for="loadpalette">Load Palette Image(s)</label>
-    <input type="file" id="loadpalette" name="files[]" multiple />
+    <input type="file" id="loadpalette" multiple />
+    <br>
     <table id="palette"></table>
+    <h2>Image</h2>
+    <label for="ditherer">Ditherer</label>
+    <select id="ditherer">
+      <option value="none" selected>None</option>
+      <option value="floydsteinberg">Floyd Steinberg</option>
+      <option value="floydsteinbergvanilla">Floyd Steinberg Vanilla</option>
+      <option value="floydsteinbergcheckered">Floyd Steinberg Checkered</option>
+      <option value="ordered">2x2 Ordered</option>
+    </select>
+    <br>
+    <label for="loadimage">Load Image</label>
+    <input type="file" id="loadimage" />
+    <br>
+    <table id="design"></table>
   </body>
 </html>

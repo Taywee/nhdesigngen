@@ -5,7 +5,7 @@ use exoquant::{Color, Histogram, Quantizer, SimpleColorSpace, Remapper};
 use std::iter::{Extend, IntoIterator, repeat_with};
 
 pub struct Design {
-    source_image: Vec<Color>,
+    image: Vec<Color>,
     dimensions: (usize, usize),
     histogram: Histogram,
     palette: Vec<NHPaletteItem>,
@@ -18,7 +18,7 @@ impl Default for Design {
         Design {
             palette,
             histogram: Histogram::new(),
-            source_image: vec![Color::new(0, 0, 0, 255)],
+            image: vec![Color::new(0, 0, 0, 255)],
             dimensions: (1, 1),
         }
     }
@@ -29,12 +29,43 @@ impl Design {
         &self.palette
     }
 
+    /// Load the full image
+    pub fn load_image(&mut self, image: Vec<(u8, u8, u8, u8)>, dimensions: (usize, usize)) -> Result<(), String> {
+        if image.len() != dimensions.0 * dimensions.1 {
+            return Err(format!("There was an error with the image dimensions.  The dimensions say the image should be {}x{} for {} pixels, but the image was actually {} pixels", dimensions.0, dimensions.1, dimensions.0 * dimensions.1, image.len()));
+        }
+        if dimensions.0 > 64 || dimensions.1 > 64 {
+            return Err(format!("The max image size is 64x64, but you tried to load an image with {}x{} pixels", dimensions.0, dimensions.1));
+        }
+        self.image = image.into_iter().map(|pixel| {
+            if pixel.3 == 0 {
+                Color {
+                    r: 0,
+                    g: 0,
+                    b: 0,
+                    a: 0,
+                }
+            } else {
+                Color {
+                    r: pixel.0,
+                    g: pixel.1,
+                    b: pixel.2,
+                    a: pixel.3,
+                }
+            }
+        }).collect();
+        self.dimensions = dimensions;
+        Ok(())
+    }
+
     /// Load some files into a contained histogram
-    pub fn load_histogram_from_buffers(&mut self, files: Vec<Vec<(u8, u8, u8, u8)>>) {
-        //TODO: Add >64x64 per-image error condition
+    pub fn load_histogram(&mut self, images: Vec<Vec<(u8, u8, u8, u8)>>) -> Result<(), String> {
         self.histogram = Histogram::new();
-        for file in files {
-            self.histogram.extend(file.iter()
+        for image in images {
+            if image.len() > 4096 {
+                return Err(format!("The max allowed image size is 4096 pixels (64x64).  You tried to load an image with {} pixels", image.len()));
+            }
+            self.histogram.extend(image.iter()
                 // Filter out all transparent pixels for the purpose of palette generation
                 .filter(|p| p.3 > 0)
                 .map(|p| {
@@ -47,6 +78,7 @@ impl Design {
                     }
             }));
         }
+        Ok(())
     }
 
     /// Load some files into a contained palette
@@ -76,20 +108,11 @@ impl Design {
 
     /// Generate the indexed design in question 
     pub fn generate<D>(&self, ditherer: D) -> Vec<u8>
-        where D: AsRef<dyn Ditherer>
+        where D: Ditherer
     {
-        let ditherer = ditherer.as_ref();
         let colorspace = SimpleColorSpace::default();
         let palette: Vec<Color> = self.palette.iter().map(Into::into).collect();
-        let remapper = Remapper::new(&palette, &colorspace, ditherer);
-        let pixels: Vec<Color> = self.source_image.iter().map(|p| {
-                if p.a == 0 {
-                    // Ensure all transparent pixels have the same color
-                    Color::new(0, 0, 0, 0)
-                } else {
-                    p.clone()
-                }
-            }).collect();
-        remapper.remap(&pixels, self.dimensions.0)
+        let remapper = Remapper::new(&palette, &colorspace, &ditherer);
+        remapper.remap(&self.image, self.dimensions.0)
     }
 }
