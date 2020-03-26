@@ -11,19 +11,23 @@ license = "MIT"
 keywords = ["games", "graphics"]
 categories = ["games","multimedia::images", "multimedia"]
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 image = '^0.23'
 exoquant = '^0.2'
-#clap = '^2'
-gio = "^0"
-gdk = "^0"
-gdk-pixbuf = "^0"
-pango = "^0"
-glib = "^0"
+wasm-bindgen = "0.2.59"
 
-[dependencies.gtk]
-version = "^0.8"
-features = ["v3_20"]
+[dependencies.web-sys]
+version = "0.3.4"
+features = [
+  'Document',
+  'Element',
+  'HtmlElement',
+  'Node',
+  'Window',
+]
 
 [profile.release]
 opt-level = "z"
