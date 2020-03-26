@@ -1,6 +1,8 @@
 pub mod color;
 pub mod design;
+use color::NHPaletteItemPair;
 use design::Design;
+use std::collections::HashMap;
 
 use wasm_bindgen::prelude::*;
 
@@ -22,10 +24,18 @@ pub fn design_new() -> *mut Design {
 }
 
 #[wasm_bindgen]
-pub fn design_print_palette(design: *const Design) -> String {
+pub fn design_palette(design: *const Design) -> Result<JsValue, JsValue> {
     if let Some(design) = unsafe { design.as_ref() } {
-        format!("design palette: {:?}", design.palette())
+        let items: Vec<NHPaletteItemPair> = design.palette().iter().map(|item| {
+            let color: exoquant::Color = item.into();
+            NHPaletteItemPair{
+                item: item.clone(),
+                rgba: format!("{:02X}{:02X}{:02X}{:02X}", color.r, color.g, color.b, color.a),
+            }
+        }).collect();
+
+        JsValue::from_serde(&items).map_err(|e| e.to_string().into())
     } else {
-        panic!("AAAAAAHHHH");
+        Err("Got a null pointer for design".into())
     }
 }

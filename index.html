@@ -2,56 +2,100 @@
   <head>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
   </head>
+  <style>
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+    }
+  </style>
   <body>
     <script type="module">
-      // Use ES module import syntax to import functionality from the module
-      // that we have compiled.
-      //
-      // Note that the `default` import is an initialization function which
-      // will "boot" the module and make it ready to use. Currently browsers
-      // don't support natively imported WebAssembly as an ES module, but
-      // eventually the manual initialization won't be required!
-      import init, { design_new, design_print_palette } from './pkg/nhdesigngen.js';
+      import init, { design_new, design_palette } from './pkg/nhdesigngen.js';
 
       async function run() {
-        // First up we need to actually load the wasm file, so we use the
-        // default export to inform it where the wasm file is located on the
-        // server, and then we wait on the returned promise to wait for the
-        // wasm to be loaded.
-        //
-        // It may look like this: `await init('./pkg/without_a_bundler_bg.wasm');`,
-        // but there is also a handy default inside `init` function, which uses
-        // `import.meta` to locate the wasm file relatively to js file.
-        //
-        // Note that instead of a string you can also pass in any of the
-        // following things:
-        //
-        // * `WebAssembly.Module`
-        //
-        // * `ArrayBuffer`
-        //
-        // * `Response`
-        //
-        // * `Promise` which returns any of the above, e.g. `fetch("./path/to/wasm")`
-        //
-        // This gives you complete control over how the module is loaded
-        // and compiled.
-        //
-        // Also note that the promise, when resolved, yields the wasm module's
-        // exports which is the same as importing the `*_bg` module in other
-        // modes
         await init();
 
-        // And afterwards we can use all the functionality defined in wasm.
         const design = design_new();
-        console.log(`new design: = ${design}`);
-        console.log(design_print_palette(design));
-        console.log(design_print_palette(5));
-        console.log('printed');
+
+        function update() {
+          const palette = design_palette(design);
+          console.log(palette);
+
+          // Clear out the palette table
+          const palette_table = document.getElementById('palette');
+          palette_table.textContent = '';
+          const index_row = document.createElement('tr');
+          const color_row = document.createElement('tr');
+          const hue_row = document.createElement('tr');
+          const saturation_row = document.createElement('tr');
+          const value_row = document.createElement('tr');
+
+          palette_table.appendChild(index_row);
+          palette_table.appendChild(color_row);
+          palette_table.appendChild(hue_row);
+          palette_table.appendChild(saturation_row);
+          palette_table.appendChild(value_row);
+
+          const index_th = document.createElement('th');
+          index_th.textContent = 'index';
+          index_row.appendChild(index_th);
+
+          const color_th = document.createElement('th');
+          color_th.textContent = 'color';
+          color_row.appendChild(color_th);
+
+          const hue_th = document.createElement('th');
+          hue_th.textContent = 'hue';
+          hue_row.appendChild(hue_th);
+
+          const saturation_th = document.createElement('th');
+          saturation_th.textContent = 'saturation';
+          saturation_row.appendChild(saturation_th);
+
+          const value_th = document.createElement('th');
+          value_th.textContent = 'value';
+          value_row.appendChild(value_th);
+
+          // Actually add the palette
+          palette.forEach((item, index) => {
+            const index_td = document.createElement('th');
+            index_td.textContent = index + 1;
+            index_row.appendChild(index_td);
+
+            const color_td = document.createElement('td');
+            color_td.setAttribute('style', `background-color: #${item.rgba};`);
+            color_row.appendChild(color_td);
+
+            if (item.item !== 'Transparent') {
+              const hue_td = document.createElement('td');
+              hue_td.textContent = item.item.Color.h;
+              hue_row.appendChild(hue_td);
+
+              const saturation_td = document.createElement('td');
+              saturation_td.textContent = item.item.Color.s;
+              saturation_row.appendChild(saturation_td);
+
+              const value_td = document.createElement('td');
+              value_td.textContent = item.item.Color.s;
+              value_row.appendChild(value_td);
+            }
+          });
+        }
+
+        update();
       }
 
       run();
     </script>
-    <button type="button" id="butt">Click Me!</button>
+    <h1>Palette</h1>
+    <label for="optimizer">Palette Optimizer</label>
+    <select id="optimizer">
+      <option value="kmeans" selected>K-Means</option>
+      <option value="weightedkmeans">Weighted K-Means</option>
+    </select>
+    <br>
+    <label for="loadpalette">Load Palette Image(s)</label>
+    <input type="file" id="loadpalette" name="files[]" multiple />
+    <table id="palette"></table>
   </body>
 </html>

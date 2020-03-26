@@ -1,7 +1,8 @@
 use exoquant::Color;
+use serde::Serialize;
 
 /// Simple full-range HSV+alpha for conversions
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct HSVA {
     /// Hue, in degrees [0, 360)
     pub h: f32,
@@ -16,7 +17,7 @@ pub struct HSVA {
 
 
 /// Quantized HSV
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize)]
 pub struct NHColor {
     pub h: u8,
     pub s: u8,
@@ -24,10 +25,17 @@ pub struct NHColor {
 }
 
 /// Palette item allowing HSV or transparent
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum NHPaletteItem {
     Color(NHColor),
     Transparent,
+}
+
+/// Palette item allowing HSV or transparent
+#[derive(Debug, Clone, Serialize)]
+pub struct NHPaletteItemPair {
+    pub item: NHPaletteItem,
+    pub rgba: String,
 }
 
 impl Default for HSVA {
