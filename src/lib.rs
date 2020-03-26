@@ -2,7 +2,6 @@ pub mod color;
 pub mod design;
 use color::NHPaletteItemPair;
 use design::Design;
-use std::collections::HashMap;
 
 use wasm_bindgen::prelude::*;
 
@@ -13,7 +12,7 @@ pub fn main() -> Result<(), JsValue> {
     // window object.
     let window = web_sys::window().expect("no global `window` exists");
     let document = window.document().expect("should have a document on window");
-    let body = document.body().expect("document should have a body");
+    document.body().expect("document should have a body");
 
     Ok(())
 }
